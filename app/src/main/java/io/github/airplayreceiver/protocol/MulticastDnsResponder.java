@@ -63,7 +63,7 @@ public final class MulticastDnsResponder {
     private final String hostName;
     private final List<Service> services;
 
-    private MulticastSocket socket;
+    private volatile MulticastSocket socket;
     private Thread thread;
     private volatile boolean running;
 
@@ -142,9 +142,13 @@ public final class MulticastDnsResponder {
                 }
                 announcementIndex++;
             }
+            MulticastSocket current = socket;
+            if (current == null) {
+                break;
+            }
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
-                socket.receive(packet);
+                current.receive(packet);
             } catch (SocketTimeoutException timeout) {
                 continue;
             } catch (IOException error) {
@@ -203,8 +207,9 @@ public final class MulticastDnsResponder {
 
         boolean legacyUnicast = packet.getPort() != PORT;
         byte[] response = answer.encode(legacyUnicast ? readShort(data, 0) : 0, legacyUnicast);
-        if (legacyUnicast || unicastRequested) {
-            socket.send(new DatagramPacket(response, response.length, packet.getAddress(), packet.getPort()));
+        MulticastSocket current = socket;
+        if (current != null && (legacyUnicast || unicastRequested)) {
+            current.send(new DatagramPacket(response, response.length, packet.getAddress(), packet.getPort()));
         }
         if (!legacyUnicast) {
             sendMulticast(response);

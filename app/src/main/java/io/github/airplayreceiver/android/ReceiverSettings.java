@@ -17,7 +17,6 @@ final class ReceiverSettings {
     private static final String KEY_IDENTITY_SEED = "identity_seed";
     private static final String KEY_START_ON_BOOT = "start_on_boot";
     private static final String KEY_VIDEO_HEIGHT = "video_height";
-    private static final String KEY_REMOVED_HIGH_DEFINITION = "full_high_definition";
 
     private final Context context;
     private final SharedPreferences preferences;
@@ -58,14 +57,12 @@ final class ReceiverSettings {
     }
 
     void setVideoHeight(int height) {
-        preferences.edit().putInt(KEY_VIDEO_HEIGHT, height).remove(KEY_REMOVED_HIGH_DEFINITION).apply();
+        preferences.edit().putInt(KEY_VIDEO_HEIGHT, height).apply();
     }
 
     /** A random, locally administered unicast MAC-style identifier, created once. */
     byte[] deviceIdentifier() {
-        byte[] value = readBytes(KEY_DEVICE_IDENTIFIER, 6);
-        value[0] = (byte) ((value[0] & 0xFC) | 0x02);
-        return value;
+        return readBytes(KEY_DEVICE_IDENTIFIER, 6);
     }
 
     /** The Ed25519 seed behind the advertised public key, created once. */

@@ -22,6 +22,7 @@ public final class AirPlayServer {
 
     private static final String TAG = "AirPlayServer";
     private static final Charset ASCII = Charset.forName("US-ASCII");
+    private static final int MAXIMUM_CONNECTIONS = 16;
 
     private final ReceiverConfiguration configuration;
     private final ReceiverListener listener;
@@ -101,6 +102,11 @@ public final class AirPlayServer {
                 socket.setTcpNoDelay(true);
                 final Connection connection = new Connection(socket);
                 synchronized (this) {
+                    if (connections.size() >= MAXIMUM_CONNECTIONS) {
+                        ReceiverLog.w(TAG, "Refusing connection from " + connection.remoteAddress + ": too many open");
+                        socket.close();
+                        continue;
+                    }
                     connections.add(connection);
                 }
                 Thread thread = new Thread(new Runnable() {
@@ -182,7 +188,7 @@ public final class AirPlayServer {
                     ControlMessage.Response response = new ControlMessage.Response();
                     try {
                         handle(request, response);
-                    } catch (Exception error) {
+                    } catch (Exception | OutOfMemoryError error) {
                         ReceiverLog.e(TAG, "Failed to handle " + request.method + " " + request.path, error);
                         response.status(500, "Internal Server Error");
                     }
@@ -199,9 +205,9 @@ public final class AirPlayServer {
                         break;
                     }
                 }
-            } catch (IOException error) {
+            } catch (IOException | RuntimeException error) {
                 if (!closed) {
-                    ReceiverLog.d(TAG, "Connection " + remoteAddress + " ended: " + error);
+                    ReceiverLog.i(TAG, "Connection " + remoteAddress + " ended: " + error);
                 }
             } finally {
                 close();
@@ -355,7 +361,7 @@ public final class AirPlayServer {
             info.put("pk", LegacyPairing.publicKeyForSeed(configuration.identitySeed));
             info.put("features", ReceiverConfiguration.FEATURES);
             info.put("name", configuration.name);
-            info.put("pi", ReceiverConfiguration.PAIRING_IDENTIFIER);
+            info.put("pi", configuration.pairingIdentifier());
             info.put("vv", 2L);
             info.put("statusFlags", 68L);
             info.put("keepAliveLowPower", Boolean.TRUE);
@@ -389,7 +395,7 @@ public final class AirPlayServer {
             info.put("audioFormats", formats);
 
             Map<String, Object> display = new LinkedHashMap<>();
-            display.put("uuid", ReceiverConfiguration.DISPLAY_IDENTIFIER);
+            display.put("uuid", configuration.displayIdentifier());
             display.put("widthPhysical", 0L);
             display.put("heightPhysical", 0L);
             display.put("width", (long) configuration.displayWidth);

@@ -98,6 +98,9 @@ public final class MainActivity extends Activity implements ReceiverService.Stat
 
     private void updateResolutionLabel() {
         int height = settings.videoHeight();
+        if (height >= 2160 && !ReceiverService.supportsUltraHighDefinition(this)) {
+            height = 1080;
+        }
         resolutionButton.setText(height >= 2160 ? R.string.resolution_2160
                 : height <= 720 ? R.string.resolution_720 : R.string.resolution_1080);
     }

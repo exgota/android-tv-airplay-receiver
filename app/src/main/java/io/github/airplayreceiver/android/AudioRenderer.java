@@ -142,13 +142,18 @@ final class AudioRenderer {
                 } catch (InterruptedException interrupted) {
                     break;
                 }
-                applyVolume();
-                if (item == FLUSH) {
-                    flushOutput();
-                } else if (item instanceof byte[]) {
-                    decode((byte[]) item);
+                try {
+                    applyVolume();
+                    if (item == FLUSH) {
+                        flushOutput();
+                    } else if (item instanceof byte[]) {
+                        decode((byte[]) item);
+                    }
+                    drainCodec(0);
+                } catch (RuntimeException error) {
+                    decodeErrors++;
+                    ReceiverLog.w(TAG, "Audio output error " + decodeErrors + ": " + error);
                 }
-                drainCodec(0);
             }
         } catch (Throwable error) {
             ReceiverLog.e(TAG, "Audio playback thread failed", error);

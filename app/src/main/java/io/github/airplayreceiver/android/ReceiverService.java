@@ -92,16 +92,14 @@ public final class ReceiverService extends Service implements ReceiverListener {
     private volatile Bitmap photo;
 
     static void start(Context context) {
-        Intent intent = new Intent(context, ReceiverService.class);
-        if (Build.VERSION.SDK_INT >= 26) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
-        }
+        startWithIntent(context, new Intent(context, ReceiverService.class));
     }
 
     static void restart(Context context) {
-        Intent intent = new Intent(context, ReceiverService.class).setAction(ACTION_RESTART);
+        startWithIntent(context, new Intent(context, ReceiverService.class).setAction(ACTION_RESTART));
+    }
+
+    private static void startWithIntent(Context context, Intent intent) {
         if (Build.VERSION.SDK_INT >= 26) {
             context.startForegroundService(intent);
         } else {
@@ -352,7 +350,7 @@ public final class ReceiverService extends Service implements ReceiverListener {
         });
     }
 
-    private void updateActivityStatus() {
+    private synchronized void updateActivityStatus() {
         String activity;
         String client = clientName != null ? clientName : "a device";
         if (mirroring && audioPlaying) {
@@ -440,6 +438,8 @@ public final class ReceiverService extends Service implements ReceiverListener {
         clientName = null;
         mirroring = false;
         audioPlaying = false;
+        photoShowing = false;
+        photo = null;
         videoRenderer.reset();
         audioRenderer.stop();
         updateActivityStatus();

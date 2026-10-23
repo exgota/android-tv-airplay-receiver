@@ -92,7 +92,12 @@ public final class BinaryPropertyList {
             }
             int intMarker = data[position + 1] & 0xFF;
             int byteCount = 1 << (intMarker & 0x0F);
-            return new int[]{(int) readUnsigned(position + 2, byteCount), 2 + byteCount};
+            long length = readUnsigned(position + 2, Math.min(byteCount, 8));
+            // Every element takes at least one byte, so no honest length exceeds the input size.
+            if (length < 0 || length > data.length) {
+                throw new IllegalArgumentException("Property list length out of range: " + length);
+            }
+            return new int[]{(int) length, 2 + byteCount};
         }
 
         Object readObject(int index, int depth) {

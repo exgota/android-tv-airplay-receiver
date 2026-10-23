@@ -75,6 +75,8 @@ final class VideoRenderer {
     private volatile SizeListener sizeListener;
     private volatile int videoWidth;
     private volatile int videoHeight;
+    /** Set after a backlog drop: frames until the next key frame would decode against missing references. */
+    private volatile boolean awaitingKeyFrame;
     private Thread thread;
     private volatile boolean running;
 
@@ -177,6 +179,13 @@ final class VideoRenderer {
             // The decoder has fallen far behind; keep only what is needed to resume at a key frame.
             ReceiverLog.w(TAG, "Decoder backlog of " + queue.size() + " items, waiting for next key frame");
             removeQueued(false);
+            awaitingKeyFrame = true;
+        }
+        if (awaitingKeyFrame) {
+            if (!keyFrame) {
+                return;
+            }
+            awaitingKeyFrame = false;
         }
         queue.offer(new Frame(data, timestampNanoseconds / 1000, keyFrame));
     }
@@ -199,19 +208,29 @@ final class VideoRenderer {
                         break;
                     }
                 }
-                if (item instanceof Frame) {
-                    handleFrame((Frame) item);
-                } else if (item instanceof Parameters) {
-                    handleParameters((Parameters) item);
-                } else if (item instanceof SurfaceChange) {
-                    handleSurface(((SurfaceChange) item).surface);
-                    ((SurfaceChange) item).handled.countDown();
-                } else if (item == RESET) {
-                    releaseCodec();
-                    parameters = null;
-                    clearCache();
+                try {
+                    if (item instanceof Frame) {
+                        handleFrame((Frame) item);
+                    } else if (item instanceof Parameters) {
+                        handleParameters((Parameters) item);
+                    } else if (item instanceof SurfaceChange) {
+                        handleSurface(((SurfaceChange) item).surface);
+                    } else if (item == RESET) {
+                        releaseCodec();
+                        parameters = null;
+                        clearCache();
+                        awaitingKeyFrame = false;
+                    }
+                    drainOutput(0);
+                } catch (RuntimeException error) {
+                    // MediaCodec reports most failures as IllegalStateException; start over with a fresh codec.
+                    ReceiverLog.e(TAG, "Decoder error, restarting the codec", error);
+                    restartCodec();
+                } finally {
+                    if (item instanceof SurfaceChange) {
+                        ((SurfaceChange) item).handled.countDown();
+                    }
                 }
-                drainOutput(0);
             }
         } catch (Throwable error) {
             ReceiverLog.e(TAG, "Video decoder thread failed", error);
@@ -243,12 +262,17 @@ final class VideoRenderer {
         releaseCodec();
         surface = newSurface;
         if (surface != null && parameters != null) {
-            configureCodec();
-            if (codec != null && cacheValid) {
-                ReceiverLog.i(TAG, "Replaying " + cache.size() + " cached frames");
-                for (Frame frame : new ArrayList<>(cache)) {
-                    queueFrame(frame);
-                }
+            restartCodec();
+        }
+    }
+
+    /** Configures a fresh codec and feeds it the frames since the last key frame. */
+    private void restartCodec() {
+        configureCodec();
+        if (codec != null && cacheValid) {
+            ReceiverLog.i(TAG, "Replaying " + cache.size() + " cached frames");
+            for (Frame frame : new ArrayList<>(cache)) {
+                queueFrame(frame);
             }
         }
     }
@@ -336,9 +360,9 @@ final class VideoRenderer {
             int index;
             try {
                 index = codec.dequeueInputBuffer(10000);
-            } catch (Exception error) {
+            } catch (RuntimeException error) {
                 ReceiverLog.e(TAG, "dequeueInputBuffer failed, restarting decoder", error);
-                configureCodec();
+                releaseCodec();
                 return;
             }
             if (index >= 0) {
@@ -375,10 +399,9 @@ final class VideoRenderer {
             int index;
             try {
                 index = codec.dequeueOutputBuffer(bufferInfo, timeoutMicroseconds);
-            } catch (Exception error) {
+            } catch (RuntimeException error) {
                 ReceiverLog.e(TAG, "dequeueOutputBuffer failed", error);
-                configureCodec();
-                return;
+                throw error;
             }
             if (index >= 0) {
                 codec.releaseOutputBuffer(index, true);

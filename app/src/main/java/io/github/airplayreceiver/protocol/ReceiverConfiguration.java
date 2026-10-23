@@ -14,8 +14,6 @@ public final class ReceiverConfiguration {
     public static final String FEATURES_TEXT = "0x5A7FFEE6,0x0";
     public static final String MODEL = "AppleTV3,2";
     public static final String SOURCE_VERSION = "220.68";
-    public static final String PAIRING_IDENTIFIER = "2e388006-13ba-4041-9a67-25dd4a43d536";
-    public static final String DISPLAY_IDENTIFIER = "e0ff8a27-6738-3d56-8a16-cc53aacee925";
 
     public final String name;
     /** Six bytes, formatted as a MAC address in the "deviceid" record. */
@@ -47,6 +45,23 @@ public final class ReceiverConfiguration {
         return builder.toString();
     }
 
+    /** Per-receiver pairing identifier ("pi"), stable because it derives from the device identifier. */
+    public String pairingIdentifier() {
+        return java.util.UUID.nameUUIDFromBytes(concatenate("pairing", deviceIdentifier)).toString();
+    }
+
+    public String displayIdentifier() {
+        return java.util.UUID.nameUUIDFromBytes(concatenate("display", deviceIdentifier)).toString();
+    }
+
+    private static byte[] concatenate(String label, byte[] value) {
+        byte[] prefix = label.getBytes(java.nio.charset.Charset.forName("US-ASCII"));
+        byte[] result = new byte[prefix.length + value.length];
+        System.arraycopy(prefix, 0, result, 0, prefix.length);
+        System.arraycopy(value, 0, result, prefix.length, value.length);
+        return result;
+    }
+
     public String publicKeyHex() {
         return ReceiverLog.hex(LegacyPairing.publicKeyForSeed(identitySeed));
     }
@@ -67,7 +82,7 @@ public final class ReceiverConfiguration {
         txt.put("flags", "0x4");
         txt.put("model", MODEL);
         txt.put("pk", publicKeyHex());
-        txt.put("pi", PAIRING_IDENTIFIER);
+        txt.put("pi", pairingIdentifier());
         txt.put("srcvers", SOURCE_VERSION);
         txt.put("vv", "2");
         return txt;

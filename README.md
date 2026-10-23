@@ -2,7 +2,7 @@
 
 AirPlay receiver for old Android TV hardware: screen mirroring (H.264), audio (AAC-ELD, AAC-LC, ALAC, PCM), and photos. Pure Java, no native code, no root. About 270 KB.
 
-Uses legacy AirPlay pairing, FairPlay SAP v1 and the AirPlay 1 timing protocol, the same approach as UxPlay. FairPlay DRM content (Netflix, Apple TV+) cannot work.
+Uses legacy AirPlay pairing, FairPlay SAP v1 and the AirPlay 1 timing protocol, the same approach as UxPlay. FairPlay DRM content (Netflix, Apple TV+) cannot work. No PIN pairing. Photo display is implemented but untested.
 
 ## Tested
 

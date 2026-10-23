@@ -57,7 +57,11 @@ public final class ControlMessage {
         int contentLength = 0;
         String lengthHeader = headers.get("content-length");
         if (lengthHeader != null) {
-            contentLength = Integer.parseInt(lengthHeader.trim());
+            try {
+                contentLength = Integer.parseInt(lengthHeader.trim());
+            } catch (NumberFormatException error) {
+                throw new IOException("Malformed content length: " + lengthHeader);
+            }
         }
         if (contentLength < 0 || contentLength > MAXIMUM_BODY) {
             throw new IOException("Unreasonable content length " + contentLength);
