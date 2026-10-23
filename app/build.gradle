@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.airplayreceiver'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.airplayreceiver'
+        minSdk 22
+        targetSdk 28
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Sideloaded build: sign with the debug key so the APK installs without extra setup.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        disable 'ExpiredTargetSdkVersion', 'OldTargetApi'
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/*.version', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
+        }
+    }
+}
+
+dependencies {
+    // Ed25519 signatures and X25519 key agreement for AirPlay pairing; Android 5.1 provides neither.
+    implementation 'net.i2p.crypto:eddsa:0.3.0'
+    implementation 'org.whispersystems:curve25519-java:0.5.0'
+}

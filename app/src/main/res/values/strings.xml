@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="application_name">AirPlay Receiver</string>
+    <string name="notification_channel_name">AirPlay receiver</string>
+    <string name="notification_title">AirPlay receiver is running</string>
+    <string name="rename_button">Rename</string>
+    <string name="rename_title">Receiver name</string>
+    <string name="rename_confirm">Save</string>
+    <string name="rename_cancel">Cancel</string>
+    <string name="start_on_boot_on">Start on boot: on</string>
+    <string name="start_on_boot_off">Start on boot: off</string>
+    <string name="restart_button">Restart receiver</string>
+    <string name="instructions">On an iPhone, iPad or Mac, open Control Center, choose Screen Mirroring, and pick this name. Music apps can play here through their AirPlay button.</string>
+    <string name="resolution_1080">Quality: 1080p</string>
+    <string name="resolution_720">Quality: 720p (faster)</string>
+    <string name="resolution_2160">Quality: 4K (Mac only)</string>
+</resources>
